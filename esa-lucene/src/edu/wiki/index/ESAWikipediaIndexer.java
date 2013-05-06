@@ -2,9 +2,11 @@ package edu.wiki.index;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,6 +17,7 @@ import java.sql.Statement;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.NumericField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -36,7 +39,7 @@ public class ESAWikipediaIndexer {
 	  static Statement stmtArticle;
 	  static PreparedStatement pstmt;
 	  static Statement stmtLimit;
-	  static String strArticleQuery = "SELECT a.id,a.title,t.old_text FROM article a, text t WHERE ? <= a.id AND a.id < ? AND a.id = t.old_id";
+	  static String strArticleQuery = "SELECT g.id,a.title,t.old_text FROM article a, text t, geoarticle g WHERE ? <= a.id AND a.id < ? AND a.id = t.old_id AND a.id = g.id";
 	  
 	  static String strLimitQuery = "SELECT MAX(id) FROM article;";
 	  static String strPrQuery = "SELECT MAX(score) FROM pagerank;";
@@ -94,6 +97,7 @@ public class ESAWikipediaIndexer {
 	    }
 
 	    indexer.indexDB();
+	    //indexer.indexCSV();
 	    
 
 	    //===================================================
@@ -209,4 +213,75 @@ public class ESAWikipediaIndexer {
 	    writer.optimize();
 	    writer.close();
 	  }
+
+	  public void indexCSV() throws IOException, SQLException {
+    
+	    int originalNumDocs = writer.numDocs();
+	    int id = 0; // this is not the real wikipedia id 
+	    String title;
+	    String text_blob;
+	    float lat; // latitude
+	    float lon; // longitude
+	    	    
+	    writer.setSimilarity(new ESASimilarity());
+	    BufferedReader csvReader = new BufferedReader(new FileReader(new File("/home/chrisschaefer/Downloads/geo_long_abstracts_en.csv")));
+	    String line;
+	    csvReader.readLine(); // skip the header
+	    while((line = csvReader.readLine()) != null) {
+	    	id++;
+	    	String[] parts = line.split("\t", 4);
+			title = parts[0];
+			lat = Float.parseFloat(parts[1]);
+			lon = Float.parseFloat(parts[2]);
+			text_blob = parts[3];
+			
+			try {
+		        Document doc = new Document();
+	
+		        //===================================================
+		        // add contents of file
+		        //===================================================
+
+		        doc.add(new Field("contents", new StringReader(text_blob),Field.TermVector.WITH_OFFSETS));
+		        // ===
+		        // field - id
+		        // ===  
+		    	doc.add(new Field("id", String.valueOf(id),
+		    			Field.Store.YES,
+		    			Field.Index.NOT_ANALYZED));
+		        
+		        // ===
+		        // fields - lat and lon
+		        // ===  		        
+		        doc.add(new NumericField("lat",Field.Store.YES, false).setFloatValue(lat));
+		        doc.add(new NumericField("lon",Field.Store.YES, false).setFloatValue(lon));
+		        
+		        // ====
+		        // field - title
+		        // ====
+		        doc.add(new Field("title", title,
+		                Field.Store.YES,
+		                Field.Index.NOT_ANALYZED));
+	
+		        writer.addDocument(doc);
+		        //System.out.println("Added: " + id);
+		        addCount++;
+		        
+		      } catch (Exception e) {
+		        System.out.println("Could not add: " + id);
+		      }
+	    	
+	    	System.out.println("Added: " + addCount);
+	    	
+	    }
+	    
+	    int newNumDocs = writer.numDocs();
+	    System.out.println("");
+	    System.out.println("************************");
+	    /* Total TIME (sec): 8274.945 */
+	    System.out.println((newNumDocs - originalNumDocs) + " documents added.");
+	    System.out.println("************************");
+	
+	  }
 }
+

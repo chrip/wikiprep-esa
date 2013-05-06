@@ -1,6 +1,8 @@
 package edu.wiki.demo;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,13 +16,14 @@ import java.util.HashMap;
 import edu.wiki.api.concept.IConceptIterator;
 import edu.wiki.api.concept.IConceptVector;
 import edu.wiki.search.ESASearcher;
+import edu.wiki.util.ScoredCentroid;
 
-public class TestESAVectors {
+public class TestGeSAVectors {
 	
 	static Connection connection;
 	static Statement stmtQuery;
 	
-	static String strTitles = "SELECT id,title,lon,lat FROM article WHERE id IN ";
+	static String strTitles = "SELECT id,title,lat,lon FROM article WHERE id IN ";
 	
 	public static void initDB() throws ClassNotFoundException, SQLException, IOException {
 		// Load the JDBC driver 
@@ -58,7 +61,7 @@ public class TestESAVectors {
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in,"UTF-8"));
 		String text = in.readLine();
 		
-		IConceptVector cvBase = searcher.getConceptVector(text);
+		IConceptVector cvBase = searcher.getConceptVector(text);		
 		IConceptVector cv = searcher.getNormalVector(cvBase,10);
 		
 		if(cv == null){
@@ -69,13 +72,14 @@ public class TestESAVectors {
 		
 		HashMap<Integer, Double> vals = new HashMap<Integer, Double>(10);
 		HashMap<Integer, String> titles = new HashMap<Integer, String>(10);
-		HashMap<Integer, Float> lon = new HashMap<Integer, Float>(10);
 		HashMap<Integer, Float> lat = new HashMap<Integer, Float>(10);
+		HashMap<Integer, Float> lon = new HashMap<Integer, Float>(10);
 		
 		String inPart = "(";
 		
 		int count = 0;
-		while(it.next() && count < 10){
+				
+		while(it.next() /* && count < 10 */){
 			inPart += it.getId() + ",";
 			vals.put(it.getId(),it.getValue());
 			count++;
@@ -83,21 +87,26 @@ public class TestESAVectors {
 		
 		inPart = inPart.substring(0,inPart.length()-1) + ")";
 				
+		ScoredCentroid centroid = new ScoredCentroid();
 		ResultSet r = stmtQuery.executeQuery(strTitles + inPart);
 		while(r.next()){
-			titles.put(r.getInt(1), new String(r.getBytes(2),"UTF-8")); 
-			lon.put(r.getInt(1), r.getFloat(3)); 
-			lat.put(r.getInt(1), r.getFloat(4)); 
+			int id = r.getInt(1);
+			titles.put(id, new String(r.getBytes(2),"UTF-8")); 			
+			lat.put(r.getInt(1), r.getFloat(3)); 
+			lon.put(r.getInt(1), r.getFloat(4)); 
+			centroid.addScoredCoord(vals.get(id), lat.get(id), lon.get(id));
 		}
-		
+		centroid.normalize();
+		System.out.println("Centroid: \t(lat " + (float)centroid.getLatLon()[0] + ", lon " + (float)centroid.getLatLon()[1] + ")");
 		count = 0;
+		BufferedWriter outText = new BufferedWriter(new FileWriter("/tmp/gesa.csv"));
 		it.reset();
-		while(it.next() && count < 10){
+		while(it.next() /* && count < 10*/){
 			int id = it.getId();
-			System.out.println(id + "\t(lon " + lon.get(id) + ", lat " + lat.get(id) + ")\t" + titles.get(id) + "\t" + vals.get(id));
+			outText.write(id + "\t(lat " + lat.get(id) + ", lon " + lon.get(id) + ")\t" + titles.get(id) + "\t" + vals.get(id) + "\n");
 			count++;
 		}
-		
+		outText.close();
 
 	}
 

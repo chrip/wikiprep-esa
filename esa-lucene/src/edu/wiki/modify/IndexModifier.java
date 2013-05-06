@@ -102,22 +102,22 @@ public class IndexModifier {
 				") DEFAULT CHARSET=binary");
 
 		
-		stmtLink = connection.createStatement();
-		ResultSet res = stmtLink.executeQuery(strLimitQuery);
-		res.next();
-		limitID = res.getInt(1);
-		
-		
-		// read inlink counts	
-		inlinkMap = new TIntDoubleHashMap(limitID);
-		
-		int targetID, numInlinks; 
-		res = stmtLink.executeQuery(strAllInlinks);
-		while(res.next()){
-			targetID = res.getInt(1);
-			numInlinks = res.getInt(2);
-			inlinkMap.put(targetID, Math.log(1+Math.log(1+numInlinks)));
-		}
+//		stmtLink = connection.createStatement();
+//		ResultSet res = stmtLink.executeQuery(strLimitQuery);
+//		res.next();
+//		limitID = res.getInt(1);
+//		
+//		
+//		// read inlink counts	
+//		inlinkMap = new TIntDoubleHashMap(limitID);
+//		
+//		int targetID, numInlinks; 
+//		res = stmtLink.executeQuery(strAllInlinks);
+//		while(res.next()){
+//			targetID = res.getInt(1);
+//			numInlinks = res.getInt(2);
+//			inlinkMap.put(targetID, Math.log(1+Math.log(1+numInlinks)));
+//		}
 		
 		pstmtVector = connection.prepareStatement(strVectorQuery);
 		
@@ -157,7 +157,7 @@ public class IndexModifier {
 	    float idf;
 	    float tf;
 	    float tfidf;
-	    double inlinkBoost;
+	    //double inlinkBoost;
 	    double sum;
 	    
 	    int wikiID;
@@ -204,8 +204,9 @@ public class IndexModifier {
 	    	if(!reader.isDeleted(i)){
 	    		//System.out.println(i);
 	    		
+	    		// this is not the real wikiID but a simple artificial ID (row number in input file)
 	    		wikiID = Integer.valueOf(reader.document(i).getField("id").stringValue());
-	    		inlinkBoost = inlinkMap.get(wikiID);
+	    		//inlinkBoost = inlinkMap.get(wikiID);
 	    			    		
 	    		tv = reader.getTermFreqVector(i, "contents");
 	    		try {
@@ -244,13 +245,13 @@ public class IndexModifier {
 		    			if(!idfMap.containsKey(term))
 		    				continue;
 		    				    			
-		    			tfidf = (float) (tfidfMap.get(term) / sum * inlinkBoost);
+		    			tfidf = (float) (tfidfMap.get(term) / sum);
 		    			
 		    				    				    			
 		    			// System.out.println(i + ": " + term + " " + fq[k] + " " + tfidf);
 		    			
 		    			// ++++ record to DB (term,doc,tfidf) +++++
-		    			osw.write(termHash.get(term) + "\t" + term + "\t" + wikiID + "\t" + df.format(tfidf) + "\n");
+		    			osw.write(termHash.get(term) + "\t" + term + "\t" + wikiID + "\t" + String.valueOf(tfidf) + "\n");
 						
 		    		}
 	    		

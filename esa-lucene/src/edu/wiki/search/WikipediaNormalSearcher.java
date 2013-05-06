@@ -59,8 +59,8 @@ public class WikipediaNormalSearcher {
 	        ScoreDoc[] hits = results.scoreDocs;
 	        for (ScoreDoc hit : hits) {
 	            Document doc = searcher.doc(hit.doc);
-	            System.out.printf("%5.3f %s\n",
-	                              hit.score, doc.get("title"));
+	            System.out.printf("%5.3f %s %s (%s %s)\n",
+	                              hit.score, doc.get("id"), doc.get("title"), doc.get("lat"), doc.get("lon"));
 	            //System.out.println(searcher.explain(gabQuery, hit.doc));
 	        }
 

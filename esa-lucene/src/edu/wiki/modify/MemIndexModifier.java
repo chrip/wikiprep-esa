@@ -67,8 +67,6 @@ public class MemIndexModifier {
 	static int WINDOW_SIZE = 100;
 	static float WINDOW_THRES= 0.005f;
 	
-	static DecimalFormat df = new DecimalFormat("#.########");
-	
 	static public class DocScore implements Comparable<DocScore> {
 		int doc;
 		float score;
@@ -138,15 +136,15 @@ public class MemIndexModifier {
 		
 		
 		// read inlink counts	
-		inlinkMap = new TIntDoubleHashMap(limitID);
-		
-		int targetID, numInlinks; 
-		res = stmtLink.executeQuery(strAllInlinks);
-		while(res.next()){
-			targetID = res.getInt(1);
-			numInlinks = res.getInt(2);
-			inlinkMap.put(targetID, Math.log(1+Math.log(1+numInlinks)));
-		}
+//		inlinkMap = new TIntDoubleHashMap(limitID);
+//		
+//		int targetID, numInlinks; 
+//		res = stmtLink.executeQuery(strAllInlinks);
+//		while(res.next()){
+//			targetID = res.getInt(1);
+//			numInlinks = res.getInt(2);
+//			inlinkMap.put(targetID, Math.log(1+Math.log(1+numInlinks)));
+//		}
 		
 		pstmtVector = connection.prepareStatement(strVectorQuery);
 		
@@ -187,7 +185,7 @@ public class MemIndexModifier {
 	    float idf;
 	    float tf;
 	    float tfidf;
-	    double inlinkBoost;
+//	    double inlinkBoost;
 	    double sum;
 	    
 	    int wikiID;
@@ -230,17 +228,20 @@ public class MemIndexModifier {
 	    }
 	    
 	    matrix = new HashMap<String, ArrayList<DocScore>>(tcount);
-
+	    System.out.println("total number of terms: " + tcount);
 	    
 	    for(int i=0;i<maxid;i++){
 	    	if(!reader.isDeleted(i)){
 	    		//System.out.println(i);
 	    		
 	    		wikiID = Integer.valueOf(reader.document(i).getField("id").stringValue());
-	    		inlinkBoost = inlinkMap.get(wikiID);
+//	    		inlinkBoost = inlinkMap.get(wikiID);
 	    			    		
 	    		tv = reader.getTermFreqVector(i, "contents");
 	    		try {
+	    			if (tv == null) {
+	    				continue;
+	    			}
 	    			terms = tv.getTerms();
 	    			
 	    			int[] fq = tv.getTermFrequencies();
@@ -276,7 +277,7 @@ public class MemIndexModifier {
 		    			if(!idfMap.containsKey(term))
 		    				continue;
 		    				    			
-		    			tfidf = (float) (tfidfMap.get(term) / sum * inlinkBoost);
+		    			tfidf = (float) (tfidfMap.get(term) / sum /* * inlinkBoost */);
 		    			
 		    				    				    			
 		    			// System.out.println(i + ": " + term + " " + fq[k] + " " + tfidf);
@@ -406,7 +407,7 @@ public class MemIndexModifier {
 		stmtLink.execute("CREATE INDEX idx_term ON terms (term(32))");
     	
 	    eTime = System.currentTimeMillis();
-	    
+	    /* Total TIME (sec): 5157.013 */
 		System.out.println("Total TIME (sec): "+ (eTime-sTime)/1000.0);
 	    
 		
