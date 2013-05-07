@@ -67,6 +67,12 @@ public class GeoUtil {
 	  public static double greatCircleDistance2(double[] nVec1, double[] nVec2) {
 		  return Math.acos(dot(nVec1, nVec2));
 	}
+	  
+	  public static double greatCircleDistanceInKm(float latitude1, float longitude1, float latitude2, float longitude2) {
+		  double[] nVec1 = latLonToNVec(latitude1, longitude1);
+		  double[] nVec2 = latLonToNVec(latitude2, longitude2);
+		  return greatCircleDistance(nVec1, nVec2) * 6367;
+	}
 
 
 	public static double[] latLonToNVec(float latitude, float longitude) {
