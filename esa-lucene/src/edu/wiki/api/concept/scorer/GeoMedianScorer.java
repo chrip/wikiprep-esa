@@ -13,10 +13,10 @@ import java.sql.SQLException;
 import edu.wiki.api.concept.IConceptVectorData;
 import edu.wiki.api.concept.search.IScorer;
 import edu.wiki.modify.IndexModifier;
-import edu.wiki.util.ScoredCentroid;
+import edu.wiki.util.ScoredMedian;
 
 
-public class GesaScorer implements IScorer {	
+public class GeoMedianScorer implements IScorer {	
 	
 	static Connection connection = null;
 	static PreparedStatement pstmtLatLon;	
@@ -43,7 +43,7 @@ public class GesaScorer implements IScorer {
 		pstmtLatLon = connection.prepareStatement(strLatLonQuery);		
 	}
 	// Constructor
-	public GesaScorer() {
+	public GeoMedianScorer() {
 		try {
 			initDB();
 		} catch (ClassNotFoundException e) {
@@ -66,51 +66,51 @@ public class GesaScorer implements IScorer {
 			e.printStackTrace();
 		}
     }
-    int centroid1Count = 0;
-    int centroid2Count = 0;
-    int centroidLimit = 5;
-	ScoredCentroid centroid1 = new ScoredCentroid();
-	ScoredCentroid centroid2 = new ScoredCentroid();
+    int median1Count = 0;
+    int median2Count = 0;
+    int medianLimit = 5;
+	ScoredMedian median1 = new ScoredMedian();
+	ScoredMedian median2 = new ScoredMedian();
 	
 	public double getScore() {
-		return centroid1.distance(centroid2);
+		return median1.distance(median2);
 	}
 
 	public void reset( IConceptVectorData queryData, IConceptVectorData docData, int numberOfDocuments ) {
-	    centroid1Count = 0;
-	    centroid2Count = 0;
-		centroid1.reset();
-		centroid2.reset();
+	    median1Count = 0;
+	    median2Count = 0;
+		median1.reset();
+		median2.reset();
 	}
 
 	public void addConcept(
 			int queryConceptId, double queryConceptScore,
 			int docConceptId, double docConceptScore,
 			int conceptFrequency ) {
-		if(docConceptId !=0 && centroid1Count < centroidLimit) {
-			centroid1Count++;
+		if(docConceptId !=0 && median1Count < medianLimit) {
+			median1Count++;
 			try {
 				pstmtLatLon.setInt(1, docConceptId);
 				ResultSet r = pstmtLatLon.executeQuery();    	
 				while(r.next()){
 					float latitude = r.getFloat(1);
 					float longitude = r.getFloat(2);
-					centroid1.addScoredCoord(docConceptScore, latitude, longitude);
+					median1.addScoredCoord(docConceptScore, latitude, longitude);
 				}
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} 
 		}		
-		if(queryConceptId !=0 && centroid2Count < centroidLimit) {
-			centroid2Count++;
+		if(queryConceptId !=0 && median2Count < medianLimit) {
+			median2Count++;
 			try {
 				pstmtLatLon.setInt(1, queryConceptId);
 				ResultSet r = pstmtLatLon.executeQuery();    	
 				while(r.next()){
 					float latitude = r.getFloat(1);
 					float longitude = r.getFloat(2);
-					centroid2.addScoredCoord(queryConceptScore, latitude, longitude);
+					median2.addScoredCoord(queryConceptScore, latitude, longitude);
 				}
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
@@ -120,8 +120,8 @@ public class GesaScorer implements IScorer {
 	}
 
 	public void finalizeScore( IConceptVectorData queryData, IConceptVectorData docData ) {
-		centroid1.normalize();
-		centroid2.normalize();
+		median1.normalize();
+		median2.normalize();
 	}
 
 	public boolean hasScore() {

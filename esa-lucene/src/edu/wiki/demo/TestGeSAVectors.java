@@ -92,8 +92,8 @@ public class TestGeSAVectors {
 		while(r.next()){
 			int id = r.getInt(1);
 			titles.put(id, new String(r.getBytes(2),"UTF-8")); 			
-			lat.put(r.getInt(1), r.getFloat(3)); 
-			lon.put(r.getInt(1), r.getFloat(4)); 
+			lat.put(id, r.getFloat(3)); 
+			lon.put(id, r.getFloat(4)); 
 			centroid.addScoredCoord(vals.get(id), lat.get(id), lon.get(id));
 		}
 		centroid.normalize();

@@ -28,7 +28,8 @@ import java.util.Map;
 import edu.wiki.api.concept.IConceptIterator;
 import edu.wiki.api.concept.IConceptVector;
 import edu.wiki.api.concept.scorer.CosineScorer;
-import edu.wiki.api.concept.scorer.GesaScorer;
+import edu.wiki.api.concept.scorer.GeoCentroidScorer;
+import edu.wiki.api.concept.scorer.GeoMedianScorer;
 import edu.wiki.concept.ConceptVectorSimilarity;
 import edu.wiki.concept.TroveConceptVector;
 import edu.wiki.index.WikipediaAnalyzer;
@@ -76,7 +77,7 @@ public class ESASearcher {
 	static float LINK_ALPHA = 0.5f;
 	
 	//ConceptVectorSimilarity sim = new ConceptVectorSimilarity(new CosineScorer());
-	ConceptVectorSimilarity sim = new ConceptVectorSimilarity(new CosineScorer(), new GesaScorer());
+	ConceptVectorSimilarity sim = new ConceptVectorSimilarity(new CosineScorer(), new GeoMedianScorer());
 		
 	public void initDB() throws ClassNotFoundException, SQLException, IOException {
 		// Load the JDBC driver 
