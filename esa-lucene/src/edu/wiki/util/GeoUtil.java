@@ -106,5 +106,54 @@ public class GeoUtil {
 	  centroid[2] /= (double) nVecs.length;
 	  return centroid;
 	}
+	
+	// see http://msdn.microsoft.com/en-us/library/bb259689.aspx
+    private final static double EarthRadius = 6378137;
+    private final static double MinLatitude = -85.05112878;
+    private final static double MaxLatitude = 85.05112878;
+    private final static double MinLongitude = -180;
+    private final static double MaxLongitude = 180;
+    
+    /// Clips a number to the specified minimum and maximum values.
+    /// <param name="n">The number to clip.</param>
+    /// <param name="minValue">Minimum allowable value.</param>
+    /// <param name="maxValue">Maximum allowable value.</param>
+    /// <returns>The clipped value.</returns>
+    private static double Clip(double n, double minValue, double maxValue)
+    {
+        return Math.min(Math.max(n, minValue), maxValue);
+    }
+    
 
+    /// Determines the map width and height (in pixels) at a specified level
+    /// of detail.
+    /// <param name="levelOfDetail">Level of detail, from 1 (lowest detail)
+    /// to 23 (highest detail).</param>
+    /// <returns>The map width and height in pixels.</returns>
+    public static int MapSize(int levelOfDetail)
+    {
+        return 256 << levelOfDetail;
+    }
+    
+	/// Converts a point from latitude/longitude WGS-84 coordinates (in degrees)
+    /// into pixel XY coordinates at a specified level of detail.
+    /// <param name="latitude">Latitude of the point, in degrees.</param>
+    /// <param name="longitude">Longitude of the point, in degrees.</param>
+    /// <param name="levelOfDetail">Level of detail, from 1 (lowest detail)
+    /// to 23 (highest detail).</param>
+    public static long LatLongToPixel(double latitude, double longitude, int levelOfDetail)
+    {
+        latitude = Clip(latitude, MinLatitude, MaxLatitude);
+        longitude = Clip(longitude, MinLongitude, MaxLongitude);
+
+        double x = (longitude + 180) / 360; 
+        double sinLatitude = Math.sin(latitude * Math.PI / 180);
+        double y = 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI);
+
+        int mapSize = MapSize(levelOfDetail);
+        int pixelX, pixelY;
+        pixelX = (int) Clip(x * mapSize + 0.5, 0, mapSize - 1);
+        pixelY = (int) Clip(y * mapSize + 0.5, 0, mapSize - 1);
+        return pixelX + (mapSize * pixelY);
+    }
 }
