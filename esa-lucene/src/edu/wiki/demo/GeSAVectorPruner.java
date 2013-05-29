@@ -41,6 +41,7 @@ public class GeSAVectorPruner {
 		String currentTerm = "";
 		levelOfDetail = Integer.parseInt(args[1]);
 		threshold = Double.parseDouble(args[2]);
+		ArrayList<String> ids = new ArrayList<String>();
 		ArrayList<Double> tfidfScores = new ArrayList<Double>();
 		ArrayList<Double> coordinates = new ArrayList<Double>();
 		while((line = br.readLine()) != null){
@@ -49,27 +50,31 @@ public class GeSAVectorPruner {
 				break;
 			}
 			if (currentTerm.equals(parts[0]) && !currentTerm.equals("")) {
+				ids.add(parts[1]);
 				tfidfScores.add(Double.valueOf(parts[2]));
 				coordinates.add(Double.valueOf(parts[4]));
 				coordinates.add(Double.valueOf(parts[5]));
 			}
 			else {
-				tfirf(currentTerm, tfidfScores, coordinates);
+				tfirf(currentTerm, ids, tfidfScores, coordinates);
+				ids.clear();
 				tfidfScores.clear();
 				coordinates.clear();
+				ids.add(parts[1]);
 				tfidfScores.add(Double.valueOf(parts[2]));
 				coordinates.add(Double.valueOf(parts[4]));
 				coordinates.add(Double.valueOf(parts[5]));
 				currentTerm = parts[0];
 			}
 		}
-		tfirf(currentTerm, tfidfScores, coordinates);
+		tfirf(currentTerm, ids, tfidfScores, coordinates);
 		br.close();	
 		is.close();
 	}
 	
 	// term frequency - inverse raster frequency
-	private static void tfirf (String term, ArrayList<Double> tfidfScores, ArrayList<Double> coordinates) {
+	private static void tfirf (String term, ArrayList<String> ids, 
+			ArrayList<Double> tfidfScores, ArrayList<Double> coordinates) {
 		HashMap<Long, Integer> rasterMap = new HashMap<Long, Integer>(30);
 
 		for(int i = 0; i < coordinates.size(); i+=2) {
@@ -92,7 +97,12 @@ public class GeSAVectorPruner {
 			double tf = Math.log(rasterMap.get(raster) + 1);
 			double tfirfNormalized = tf*irf / (maxPossibleFrequency * maxPossibleIrf);
 			if(tfirfNormalized > threshold) {
-				System.out.println(term + "\t" + String.valueOf(coordinates.get(i)) + "\t" + String.valueOf(coordinates.get(i+1)) + "\t" + String.valueOf(tfidfScores.get(i/2)) + "\t" + String.valueOf(tfirfNormalized));
+				System.out.print(term + "\t"); 
+				System.out.print(ids.get(i/2) + "\t"); 
+				System.out.print(String.valueOf(coordinates.get(i)) + "\t"); 
+				System.out.print(String.valueOf(coordinates.get(i+1)) + "\t"); 
+				System.out.print(String.valueOf(tfidfScores.get(i/2)) + "\t"); 
+				System.out.print(String.valueOf(tfirfNormalized) + "\n");
 			}
 		}
 	}

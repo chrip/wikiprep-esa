@@ -3,6 +3,7 @@ package edu.wiki.search;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,7 +29,6 @@ import java.util.Map;
 import edu.wiki.api.concept.IConceptIterator;
 import edu.wiki.api.concept.IConceptVector;
 import edu.wiki.api.concept.scorer.CosineScorer;
-import edu.wiki.api.concept.scorer.GeoCentroidScorer;
 import edu.wiki.api.concept.scorer.GeoMedianScorer;
 import edu.wiki.concept.ConceptVectorSimilarity;
 import edu.wiki.concept.TroveConceptVector;
@@ -78,6 +78,14 @@ public class ESASearcher {
 	
 	//ConceptVectorSimilarity sim = new ConceptVectorSimilarity(new CosineScorer());
 	ConceptVectorSimilarity sim = new ConceptVectorSimilarity(new CosineScorer(), new GeoMedianScorer());
+	
+	class ScoredCoordinate {
+		public int conceptId;
+		public double score;
+		public double lat;
+		public double lon;
+	}
+	HashMap<String, ArrayList<ScoredCoordinate>> termGeoScoresMap;
 		
 	public void initDB() throws ClassNotFoundException, SQLException, IOException {
 		// Load the JDBC driver 
@@ -134,6 +142,38 @@ public class ESASearcher {
 		values = new double[maxConceptId];
 		
 		inlinkMap = new TIntIntHashMap(300);
+		
+		
+		/// begin GeSA stuff
+		termGeoScoresMap = new HashMap<String, ArrayList<ScoredCoordinate>>();
+		FileReader is = new FileReader("/data/chrisschaefer/gesa/GeSA_dump_pruned3.txt");
+		BufferedReader br = new BufferedReader(is);
+		String line;		
+		while((line = br.readLine()) != null){
+			final String [] parts = line.split("\t");
+			if(parts.length != 6) {				
+				break;
+			}
+			ScoredCoordinate sc = new ScoredCoordinate();
+			sc.conceptId = Integer.valueOf(parts[1]);
+			sc.lat = Double.valueOf(parts[2]);
+			sc.lon = Double.valueOf(parts[3]);
+			// part[4] contains the ESA tfidf score
+			// part[5] contains the GeSA term frequency inverse raster frequency
+			sc.score = Double.valueOf(parts [5]);
+			
+			if(termGeoScoresMap.containsKey(parts[0])){
+				termGeoScoresMap.get(parts[0]).add(sc);
+            }
+            else {
+            	 ArrayList<ScoredCoordinate> a = new  ArrayList<ScoredCoordinate>();
+            	 a.add(sc);
+            	 termGeoScoresMap.put(parts[0], a);
+            }  				
+		}
+		br.close();	
+		is.close();
+		// end GeSA stuff
 	}
 	
 	@Override
@@ -273,6 +313,118 @@ public class ESASearcher {
 		return newCv;
 	}
 	
+	/**
+	 * Retrieves full vector for regular features
+	 * @param query
+	 * @return Returns concept vector results exist, otherwise null 
+	 * @throws IOException
+	 * @throws SQLException
+	 */
+	public IConceptVector getGeoConceptVector(String query) throws IOException, SQLException{
+		String strTerm;
+		int numTerms = 0;
+		ResultSet rs;
+		int doc;
+		double score;
+		int vint;
+		double vdouble;
+		double tf;
+		double vsum;
+		int plen;
+        TokenStream ts = analyzer.tokenStream("contents",new StringReader(query));
+        ByteArrayInputStream bais;
+        DataInputStream dis;
+
+        this.clean();
+
+		for( int i=0; i<ids.length; i++ ) {
+			ids[i] = i;
+		}
+        
+        ts.reset();
+        
+        while (ts.incrementToken()) { 
+        	
+            TermAttribute t = ts.getAttribute(TermAttribute.class);
+            strTerm = t.term();
+            
+            // record term IDF
+            if(!idfMap.containsKey(strTerm)){
+	            pstmtIdfQuery.setBytes(1, strTerm.getBytes("UTF-8"));
+	            pstmtIdfQuery.execute();
+	            
+	            rs = pstmtIdfQuery.getResultSet();
+	            if(rs.next()){
+	            	idfMap.put(strTerm, rs.getFloat(1));	          	  
+	            }
+            }
+            
+            // records term counts for TF
+            if(freqMap.containsKey(strTerm)){
+            	vint = freqMap.get(strTerm);
+            	freqMap.put(strTerm, vint+1);
+            }
+            else {
+            	freqMap.put(strTerm, 1);
+            }
+            
+            termList.add(strTerm);
+	            
+            numTerms++;	
+
+        }
+                
+        ts.end();
+        ts.close();
+                
+        if(numTerms == 0){
+        	return null;
+        }
+        
+        // calculate TF-IDF vector (normalized)
+        vsum = 0;
+        for(String tk : idfMap.keySet()){
+        	tf = 1.0 + Math.log(freqMap.get(tk));
+        	vdouble = (idfMap.get(tk) * tf);
+        	tfidfMap.put(tk, vdouble);
+        	vsum += vdouble * vdouble;
+        }
+        vsum = Math.sqrt(vsum);
+        
+        
+        // comment this out for canceling query normalization
+        for(String tk : idfMap.keySet()){
+        	vdouble = tfidfMap.get(tk);
+        	tfidfMap.put(tk, vdouble / vsum);
+        }
+        
+        score = 0;
+        for (String tk : termList) {   
+		/// begin GeSA stuff
+		    if(termGeoScoresMap.containsKey(tk)){          	 
+		  	  for(ScoredCoordinate sc : termGeoScoresMap.get(tk)){
+		  		  doc = sc.conceptId;
+		  		  score = sc.score;
+		  		  values[doc] += score * tfidfMap.get(tk);
+		  	  }          	  
+		    }
+		  /// end GeSA stuff
+        }
+        
+        // no result
+        if(score == 0){
+        	return null;
+        }
+        
+        HeapSort.heapSort( values, ids );
+        
+        IConceptVector newCv = new TroveConceptVector(ids.length);
+		for( int i=ids.length-1; i>=0 && values[i] > 0; i-- ) {
+			newCv.set( ids[i], values[i] / numTerms );
+		}
+		
+		return newCv;
+	}
 	
 	/**
 	 * Returns trimmed form of concept vector
@@ -501,13 +653,12 @@ public class ESASearcher {
 	 */
 	public double getRelatedness(String doc1, String doc2){
 		try {
-			// IConceptVector c1 = getCombinedVector(doc1);
-			// IConceptVector c2 = getCombinedVector(doc2);
-			// IConceptVector c1 = getNormalVector(getConceptVector(doc1),10);
-			// IConceptVector c2 = getNormalVector(getConceptVector(doc2),10);
+
 			
-			IConceptVector c1 = getConceptVector(doc1);
-			IConceptVector c2 = getConceptVector(doc2);
+//			IConceptVector c1 = getConceptVector(doc1);
+//			IConceptVector c2 = getConceptVector(doc2);
+			IConceptVector c1 = getGeoConceptVector(doc1);
+			IConceptVector c2 = getGeoConceptVector(doc2);			
 			
 			if(c1 == null || c2 == null){
 				// return 0;
