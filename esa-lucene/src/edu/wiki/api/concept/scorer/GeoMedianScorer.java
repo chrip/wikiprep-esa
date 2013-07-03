@@ -68,7 +68,7 @@ public class GeoMedianScorer implements IScorer {
     }
     int median1Count = 0;
     int median2Count = 0;
-    int medianLimit = 5;
+    int medianLimit = 100;
 	ScoredMedian median1 = new ScoredMedian();
 	ScoredMedian median2 = new ScoredMedian();
 	

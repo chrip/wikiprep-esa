@@ -156,4 +156,19 @@ public class GeoUtil {
         pixelY = (int) Clip(y * mapSize + 0.5, 0, mapSize - 1);
         return pixelX + (mapSize * pixelY);
     }
+    public static int[] LatLongToXY(double latitude, double longitude, int levelOfDetail)
+    {
+        latitude = Clip(latitude, MinLatitude, MaxLatitude);
+        longitude = Clip(longitude, MinLongitude, MaxLongitude);
+
+        double x = (longitude + 180) / 360; 
+        double sinLatitude = Math.sin(latitude * Math.PI / 180);
+        double y = 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI);
+
+        int mapSize = MapSize(levelOfDetail);
+        int pixelX, pixelY;
+        pixelX = (int) Clip(x * mapSize + 0.5, 0, mapSize - 1);
+        pixelY = (int) Clip(y * mapSize + 0.5, 0, mapSize - 1);
+        return new int [] {pixelX, pixelY};
+    }
 }

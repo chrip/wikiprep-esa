@@ -160,7 +160,7 @@ public class ESASearcher {
 			sc.lon = Double.valueOf(parts[3]);
 			// part[4] contains the ESA tfidf score
 			// part[5] contains the GeSA term frequency inverse raster frequency
-			sc.score = Double.valueOf(parts [5]);
+			sc.score = Double.valueOf("1.0");
 			
 			if(termGeoScoresMap.containsKey(parts[0])){
 				termGeoScoresMap.get(parts[0]).add(sc);

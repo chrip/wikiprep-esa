@@ -1,6 +1,7 @@
 package edu.wiki.index;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -30,8 +31,8 @@ public class WikipediaAnalyzer extends Analyzer {
 	
 	public WikipediaAnalyzer() throws IOException {
 		// read stop words
-		InputStream is = ESAWikipediaIndexer.class.getResourceAsStream("/config/stopwords.txt");
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		FileReader is = new FileReader("config/stopwords.txt");
+		BufferedReader br = new BufferedReader(is);
 		ArrayList<String> stopWords = new ArrayList<String>(500);
 		
 		String line;
