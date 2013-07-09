@@ -1,32 +1,16 @@
 package edu.wiki.demo;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 
-import edu.wiki.api.concept.IConceptIterator;
-import edu.wiki.api.concept.IConceptVector;
 import edu.wiki.index.WikipediaAnalyzer;
-import edu.wiki.modify.IndexModifier;
-import edu.wiki.search.ESASearcher;
-import edu.wiki.util.GeoUtil;
-import edu.wiki.util.ScoredCentroid;
 
 public class ExtendedBooleanWikipediaDistance {
 	static int levelOfDetail;
@@ -91,27 +75,6 @@ public class ExtendedBooleanWikipediaDistance {
 			System.out.println(line + "\t" + computeWikipediaDistance(parts[0], parts[1]));
 		}
 		br.close();
-		
-//		System.out.println("berlin <-> washington " + index.get("washington").getWikipediaDistance(index.get("berlin").ids));		
-//		System.out.println("berlin <-> washington " + index.get("washington").getExtendedBooleanWikipediaDistance(index.get("berlin")));
-//		
-//		System.out.println("everest <-> washington " + index.get("washington").getWikipediaDistance(index.get("everest").ids));
-//		System.out.println("everest <-> washington " + index.get("washington").getExtendedBooleanWikipediaDistance(index.get("everest")));
-//		
-//		System.out.println("havana <-> washington " + index.get("washington").getWikipediaDistance(index.get("havana").ids));
-//		System.out.println("havana <-> washington " + index.get("washington").getExtendedBooleanWikipediaDistance(index.get("havana")));
-//
-//		System.out.println("obama <-> washington " + index.get("washington").getWikipediaDistance(index.get("obama").ids));
-//		System.out.println("obama <-> washington " + index.get("washington").getExtendedBooleanWikipediaDistance(index.get("obama")));
-//
-//		System.out.println("merkel <-> washington " + index.get("washington").getWikipediaDistance(index.get("merkel").ids));
-//		System.out.println("merkel <-> washington " + index.get("washington").getExtendedBooleanWikipediaDistance(index.get("merkel")));
-//		
-//		System.out.println("obama <-> berlin " + index.get("berlin").getWikipediaDistance(index.get("obama").ids));
-//		System.out.println("berlin <-> obama " + index.get("obama").getExtendedBooleanWikipediaDistance(index.get("berlin")));
-//		
-//		System.out.println("merkel <-> berlin " + index.get("berlin").getWikipediaDistance(index.get("merkel").ids));
-//		System.out.println("berlin <-> merkel " + index.get("merkel").getExtendedBooleanWikipediaDistance(index.get("berlin")));
 	}
 	
 	public static String preprocessQuery(String query) {
@@ -130,8 +93,7 @@ public class ExtendedBooleanWikipediaDistance {
 		}
 		return "";        
 	}
-	
-	// term frequency - inverse raster frequency
+
 	private static void addToIndex (String term, ArrayList<Long> ids, 
 			ArrayList<Double> tfidfScores) {
 		    index.put(term, new IdsAndScores(ids, tfidfScores));
